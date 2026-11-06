@@ -1,0 +1,111 @@
+name: Update upstream release
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      local_test:
+        description: "Run without creating a pull request"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-upstream
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Check and update upstream release
+    runs-on: ubuntu-24.04
+
+    outputs:
+      needed: ${{ steps.check.outputs.needed }}
+      version: ${{ steps.upstream.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Find latest upstream release
+        id: upstream
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          tag="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/dfint/installer/releases/latest \
+            | jq -er '.tag_name')"
+
+          if [[ ! "$tag" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid upstream release tag: $tag" >&2
+            exit 1
+          fi
+
+          version="${tag#v}"
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if already up to date
+        id: check
+        env:
+          TARGET_VERSION: ${{ steps.upstream.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          current="$(sed -nE \
+            's/^[[:space:]]*version = "([^"]+)";/\1/p' \
+            flake.nix | head -n1)"
+
+          echo "Current: $current"
+          echo "Target:  $TARGET_VERSION"
+
+          if [[ "$current" == "$TARGET_VERSION" ]]; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Nix
+        if: steps.check.outputs.needed == 'true'
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update version and source hash
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          python3 .github/scripts/update-upstream.py \
+            "${{ steps.upstream.outputs.version }}"
+
+      - name: Create pull request
+        if: >-
+          steps.check.outputs.needed == 'true' &&
+          inputs.local_test != true
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: bot/update-dfint-installer-${{ steps.upstream.outputs.version }}
+          delete-branch: true
+          commit-message: "Update dfint-installer to ${{ steps.upstream.outputs.version }}"
+          title: "Update dfint-installer to ${{ steps.upstream.outputs.version }}"
+          body: |
+            Automated update to upstream dfint-installer release.
+
+            Updated:
+            - Upstream version.
+            - Source archive SHA-256 hash.
+
+            Build passed successfully.
+          add-paths: |
+            flake.nix
+            flake.lock

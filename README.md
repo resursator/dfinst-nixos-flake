@@ -3,7 +3,7 @@
 
 Nix flake for building and running [dfint-installer](https://github.com/dfint/installer) on NixOS and other Linux systems with Nix flakes enabled.
 
-The flake packages **dfint-installer 0.6.6** directly from the upstream release sources. It provides a wrapped executable with the required runtime libraries, including X11, Wayland, OpenGL, Vulkan, ALSA and udev dependencies.
+The flake packages dfint-installer directly from the latest supported upstream release sources. It provides a wrapped executable with the required runtime libraries, including X11, Wayland, OpenGL, Vulkan, ALSA and udev dependencies.
 
 ## Requirements
 
@@ -53,7 +53,7 @@ dfint-installer
 ## Package details
 
 - **Upstream:** [dfint/installer](https://github.com/dfint/installer)
-- **Version:** 0.6.6
+- **Version:** Automatically tracked from upstream releases.
 - **Package attribute:** `.#dfint-installer`
 - **Default package:** `.#default`
 - **Default app:** `.#default`
