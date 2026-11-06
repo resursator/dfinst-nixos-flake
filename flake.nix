@@ -8,11 +8,11 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
 
-      version = "0.6.6";
+      version = "0.7.0";
 
       src = pkgs.fetchzip {
         url = "https://github.com/dfint/installer/archive/refs/tags/${version}.tar.gz";
-        hash = "sha256-ZnFisZJCkR5LcorBTpROXsWpJWOTnwl4HE6JucR5nOI=";
+        hash = "sha256-5ytPMQmb/IKW8qEbPqoMjpG3AUKSPyOl+1lXZgBxUR0=";
         stripRoot = true;
       };
 
