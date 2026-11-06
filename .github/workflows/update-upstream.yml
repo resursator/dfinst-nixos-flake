@@ -89,6 +89,7 @@ jobs:
             "${{ steps.upstream.outputs.version }}"
 
       - name: Create pull request
+        id: create-pr
         if: >-
           steps.check.outputs.needed == 'true' &&
           inputs.local_test != true
