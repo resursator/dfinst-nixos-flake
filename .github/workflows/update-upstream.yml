@@ -110,3 +110,12 @@ jobs:
           add-paths: |
             flake.nix
             flake.lock
+
+      - name: Enable auto-merge
+        if: steps.create-pr.outputs.pull-request-operation != 'none' &&
+            steps.create-pr.outputs.pull-request-url != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
+        run: |
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
